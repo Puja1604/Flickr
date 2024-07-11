@@ -7,35 +7,64 @@
 
 import XCTest
 
-final class FlickrUITests: XCTestCase {
-
-    override func setUpWithError() throws {
-        // Put setup code here. This method is called before the invocation of each test method in the class.
-
-        // In UI tests it is usually best to stop immediately when a failure occurs.
+class FlickrUITests: XCTestCase {
+    
+    var app: XCUIApplication!
+    
+    override func setUp() {
+        super.setUp()
+        
         continueAfterFailure = false
-
-        // In UI tests it’s important to set the initial state - such as interface orientation - required for your tests before they run. The setUp method is a good place to do this.
-    }
-
-    override func tearDownWithError() throws {
-        // Put teardown code here. This method is called after the invocation of each test method in the class.
-    }
-
-    func testExample() throws {
-        // UI tests must launch the application that they test.
-        let app = XCUIApplication()
+        
+        app = XCUIApplication()
+        app.launchArguments = ["-reset"]
         app.launch()
-
-        // Use XCTAssert and related functions to verify your tests produce the correct results.
     }
-
-    func testLaunchPerformance() throws {
-        if #available(macOS 10.15, iOS 13.0, tvOS 13.0, watchOS 7.0, *) {
-            // This measures how long it takes to launch your application.
-            measure(metrics: [XCTApplicationLaunchMetric()]) {
-                XCUIApplication().launch()
-            }
-        }
+    
+    override func tearDown() {
+        app = nil
+        super.tearDown()
+    }
+    
+    func testSearchAndDisplayImages() {
+        let searchField = app.searchFields["Search"]
+        
+        // Check the search field exists and tap it
+        XCTAssertTrue(searchField.exists, "The search field does not exist.")
+        searchField.tap()
+        
+        // Enter text in the search bar
+        searchField.typeText("test")
+        app.keyboards.buttons["Search"].tap()
+        
+        // Verify that images are displayed
+        let images = app.scrollViews.otherElements.images
+        XCTAssertTrue(images.count > 0, "No images are displayed.")
+    }
+    
+    func testImageNavigation() {
+        let searchField = app.searchFields["Search"]
+        
+        // Check the search field exists and tap it
+        XCTAssertTrue(searchField.exists, "The search field does not exist.")
+        searchField.tap()
+        
+        // Enter text in the search bar
+        searchField.typeText("test")
+        app.keyboards.buttons["Search"].tap()
+        
+        // Wait for loading to finish
+        let loadingIndicator = app.activityIndicators["ProgressView"]
+        let expectation = XCTNSPredicateExpectation(predicate: NSPredicate(format: "exists == false"), object: loadingIndicator)
+        let waitResult = XCTWaiter().wait(for: [expectation], timeout: 10)
+        XCTAssertEqual(waitResult, .completed, "Failed to load images in time")
+        
+        // Tap on the first image
+        let firstImage = app.scrollViews.otherElements.images.firstMatch
+        XCTAssertTrue(firstImage.exists, "The first image does not exist.")
+        firstImage.tap()
+        
+        let shareButton = app.buttons["Share"]
+        XCTAssertTrue(shareButton.exists)
     }
 }
